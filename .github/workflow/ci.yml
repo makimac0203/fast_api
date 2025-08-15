@@ -1,40 +1,24 @@
-# .github/workflows/ci.yml
-name: CI
+# .github/workflows/deploy.yml
+name: Deploy to Render
 
 on:
   push:
-    branches: [master]         # master に push のとき
-  pull_request:
-    branches: [master]         # PR はテストだけ
-
-concurrency:
-  group: render-${{ github.ref }}
-  cancel-in-progress: true
+    branches: [master]     # master に push されたら実行
+  workflow_dispatch:       # 必要なら手動実行も可（任意）
 
 jobs:
-  ci:
+  deploy:
     runs-on: ubuntu-latest
+    # 念のためダブルチェック
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install deps
-        run: npm ci
-
-      - name: Test
-        run: npm test
-
-      - name: Deploy to Render (only on push to master)
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      - name: Trigger Render deploy hook
         env:
-          DEPLOY_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
         run: |
-          if [ -z "$DEPLOY_URL" ]; then
-            echo "RENDER_DEPLOY_HOOK_URL secret is not set" >&2
+          if [ -z "$RENDER_DEPLOY_HOOK" ]; then
+            echo "Missing secret: RENDER_DEPLOY_HOOK" >&2
             exit 1
           fi
-          curl -fsSL "$DEPLOY_URL"
+          # Render の Deploy Hook は POST で叩くのが無難
+          curl -fsSL -X POST "$RENDER_DEPLOY_HOOK"
