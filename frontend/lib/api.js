@@ -24,3 +24,5 @@ export const createTodo = (title) =>
 
 export const getTodos = () => client.get('/api/todo');
 
+export const getUser = () => client.get('/api/user');
+
